@@ -1,0 +1,13 @@
+global proc toonDesmooth(){
+
+    string $smooths[]= `ls "*polySmoothFace*"`;
+
+    if(!size($smooths)){
+
+    	print "no desmooth";
+    	return;
+    }
+    for ($smooth in $smooths){
+        setAttr ($smooth +".divisions") 0;}
+}
+
