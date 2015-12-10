@@ -4,10 +4,8 @@ global proc toonDesmooth(){
 
     if(!size($smooths)){
 
-    	print "no desmooth";
+    	print "updating";
     	return;
     }
-    for ($smooth in $smooths){
-        setAttr ($smooth +".divisions") 0;}
 }
 
