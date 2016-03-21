@@ -3,51 +3,51 @@ from PyQt4.QtCore import *
 
 class Win(QWidget, QObject):
 
-	def __init__(self, parent=None ):
-		QWidget.__init__(self, parent )
-		self.setMouseTracking(True)
+    def __init__(self, parent=None):
+        QWidget.__init__(self, parent)
+        self.setMouseTracking(True)
 
-		self.paint = False
-		self.show()
+        self.paint = False
+        self.show()
 
-	def mousePressEvent(self, event):
+    def mousePressEvent(self, event):
 
-		if event.buttons() == Qt.LeftButton:
-			self.pos = event.pos()
-			self.path = QPainterPath(self.pos)
-			self.paint = True
-			self.update()
+        if event.buttons() == Qt.LeftButton:
+            self.pos = event.pos()
+            self.path = QPainterPath(self.pos)
+            self.paint = True
+            self.update()
 
-	def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event):
 
-		if event.buttons() == Qt.LeftButton:
-			self.pos = event.pos()
-			self.update()
+        if event.buttons() == Qt.LeftButton:
+            self.pos = event.pos()
+            self.update()
 
-	def paintEvent(self, event):
-		painter = QPainter(self)
-		painter.setRenderHints(QPainter.HighQualityAntialiasing)
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHints(QPainter.HighQualityAntialiasing)
 
-		painter.setBrush(QColor(30,30,50,255))
-		painter.drawRect(QRectF(0,0,800,800))
+        painter.setBrush(QColor(30, 30, 50, 255))
+        painter.drawRect(QRectF(0, 0, 800, 800))
 
-		color = QColor(255, 255, 255, 200)
+        color = QColor(255, 255, 255, 200)
 
-		if self.paint:
+        if self.paint:
 
-			self.path.lineTo(self.pos)
+            self.path.lineTo(self.pos)
 
-			painter.setPen(QPen(QColor(color), .8))
-			painter.drawPath(self.path)
+            painter.setPen(QPen(QColor(color), .8))
+            painter.drawPath(self.path)
 
 def launch():
 
-	app = QApplication([])
-	obj = Win()
-	# obj.resize(800,800)
-	obj.setGeometry(900, 0, 500,500)
+    app = QApplication([])
+    obj = Win()
+    # obj.resize(800,800)
+    obj.setGeometry(900, 0, 500, 500)
 
-	app.exec_()
+    app.exec_()
 
 if __name__ == '__main__':
-	launch()
+    launch()
