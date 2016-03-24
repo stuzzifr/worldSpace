@@ -47,7 +47,8 @@ class Curves(QWidget, QObject):
             for value in values[1::2]:
                 if self.clampy < value: self.clampy = value
 
-        self.setGeometry(2500, 1500, 600, self.clampy + self.border)
+        # self.setGeometry(2500, 1500, 600, self.clampy + self.border)
+        self.setGeometry(500,500, 600, self.clampy + self.border)
         self.unit = self.size().width()/self.numGrid
 
     def setStyl(self):
