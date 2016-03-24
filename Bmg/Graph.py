@@ -142,6 +142,7 @@ class Curves(QWidget, QObject):
 
         if event.buttons() == Qt.LeftButton:
             print 'left'
+            self.update()
 
         if event.buttons() == Qt.RightButton:
             print 'right'
@@ -174,7 +175,6 @@ class Curves(QWidget, QObject):
         penColor = QColor(190, 190, 190, 40)
         for v in xrange(self.numGrid):
             # -- THICK
-            print v
             if v % 10 == 0: painter.setPen(QPen(penColor.lighter(190), .8, Qt.DashLine))
             else: painter.setPen(QPen(penColor.darker(150), 1.8))
             painter.drawLine(v * self.unit, 0, v * self.unit, self.height())
@@ -226,10 +226,10 @@ class Curves(QWidget, QObject):
                 move = QPoint(values[i] * self.unit, self.size().height() - values[i+1])
                 line = QPoint(values[i+2] * self.unit, self.size().height() - values[i+3])
 
-                pourcent = (line.y() - move.y()) / float(move.y()) * 100
+                pourcent = ((self.height()-line.y()) - (self.height()-move.y())) / float(self.height() - move.y()) * 100
                 midPoint = move + ((line - move) * .5)
-                sign = '-' if pourcent > 0 else '+'
-                painter.setFont(QFont('FreeSans', 8, QFont.Light))
+                sign = '+' if pourcent > 0 else '-'
+                painter.setFont(QFont('FreeSans', 8.5, QFont.Light))
                 painter.drawText(midPoint, '{}{:0>.1f}%'.format(sign, abs(pourcent)))
 
                 self.curves[-1].moveTo(move)
@@ -263,7 +263,8 @@ class Curves(QWidget, QObject):
             legends.addText(x, legends.boundingRect().bottom() + step, font, 'hig: {: >10.1f}'.format(self.getHigh(key)))
             legends.addText(x, legends.boundingRect().bottom() + step, font, 'sum: {: >10.1f}'.format(self.getSum(key)))
 
-        painter.drawPath(legends)
+            painter.setPen(QPen(QColor(self.colors[key]).lighter(150)))
+            painter.drawPath(legends)
 
         # -- CLOSEST
         rad = 15
