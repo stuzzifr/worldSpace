@@ -102,21 +102,24 @@ class Bien(object):
 
 
 def getLinks(site='bonCoin'):
-    address = 'http://www.leboncoin.fr/ventes_immobilieres/offres/ile_de_france/seine_saint_denis/?th=1&ps=1&pe=4&ret=2'
-
-    sock = urllib.urlopen(address)
-    html = sock.read()
-    sock.close()
-
-    rawLinks = re.findall(r'href="(.+)" title', html)
-    ids = re.findall(r'ad_listid" : "(\d+)', html)
 
     links = list()
-    if ids:
-        for i in xrange(len(ids)):
-            for link in rawLinks:
-                if ids[i] in link:
-                    links.append(link)
+    for i in range(1, 2):
+        address = 'http://www.leboncoin.fr/ventes_immobilieres/offres/ile_de_france/seine_saint_denis/?o={}&ps=1&pe=4&ret=2'.format(i)
+        print address
+
+        sock = urllib.urlopen(address)
+        html = sock.read()
+        sock.close()
+
+        rawLinks = re.findall(r'href="(.+)" title', html)
+        ids = re.findall(r'ad_listid" : "(\d+)', html)
+
+        if ids:
+            for i in xrange(len(ids)):
+                for link in rawLinks:
+                    if ids[i] in link:
+                        links.append(link)
 
     return links
 
@@ -146,8 +149,13 @@ def getDatas(links, site='bonCoin'):
 
         thumb = '' if not thumb else thumb.group(1)
 
-        biens[-1].setInfos(url, price.group(1), surface.group(1),
-                           pieces.group(1), date.group(1), desc.group(1),
-                           thumb, ville[0])
+        try:
+            biens[-1].setInfos(url, price.group(1), surface.group(1),
+                               pieces.group(1), date.group(1), desc.group(1),
+                               thumb, ville[0])
+
+        except:
+
+            print 'fail ', link
 
     return biens

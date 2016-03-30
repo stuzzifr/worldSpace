@@ -1,6 +1,7 @@
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
-import random, os, math, shutil, subprocess
+import random, os, math, shutil
+import webbrowser
 import pdb
 
 db = pdb.set_trace
@@ -66,7 +67,8 @@ class Curves(QWidget, QObject):
                 if self.clampy < value:
                     self.clampy = value
 
-        self.setGeometry(1200, 1500, 600, 280)
+        self.setGeometry(200, 500, 600, 280)
+        # self.setGeometry(1200, 1500, 600, 280)
         self.unit = self.size().width()/self.numGrid
 
     def getSum(self, key):
@@ -170,7 +172,10 @@ class Curves(QWidget, QObject):
 
         if event.buttons() == Qt.LeftButton:
             if self.hoverItem:
-                subprocess.call('firefox %s' % self.hoverItem.url, shell=True)
+                webbrowser.open(self.hoverItem.url)
+
+            else:
+                print 'no hoverITems'
 
         if event.buttons() == Qt.RightButton:
             print 'right'
@@ -234,7 +239,7 @@ class Curves(QWidget, QObject):
             for i in xrange(2, len(values)-4, 2):
                 move = QPoint(values[i] * self.unit, self.height() - (values[i+1] * self.coef))
                 self.clouds.append(QPainterPath())
-                self.clouds[-1].addEllipse(move, 2, 2)
+                self.clouds[-1].addEllipse(move, 3, 3)
 
                 color = self.colors[key]
                 if self.hoverCloud == self.clouds[-1]:
@@ -257,9 +262,9 @@ class Curves(QWidget, QObject):
                 step = 16
                 legends = QPainterPath()
                 legends.addText(self.width()-s - self.border, self.border + s + step, font, 'Price: {:,} Eurs'.format(self.hoverItem.price))
-                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Rentabilite: {:.2f}'.format(self.hoverItem.ratio))
-                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Ratio: {:.0f}'.format(self.hoverItem.ratio))
-                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Surface: {}'.format(self.hoverItem.surface))
+                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Rentabilite: {:.2f}'.format(0.0))
+                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'prix\m2: {:.0f}'.format(self.hoverItem.ratio))
+                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Surface: {} m2'.format(self.hoverItem.surface))
                 legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Pieces: {}'.format(self.hoverItem.pieces))
                 legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Ville: {}'.format(self.hoverItem.ville))
                 legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Date: {}'.format(self.hoverItem.date))
