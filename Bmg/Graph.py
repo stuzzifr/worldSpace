@@ -1,6 +1,8 @@
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
-import pdb, random, math
+import random, os, math, shutil, subprocess
+import pdb
+
 db = pdb.set_trace
 
 
@@ -11,13 +13,18 @@ class Curves(QWidget, QObject):
 
     returned = pyqtSignal(str)
 
-    def __init__(self, values=None, colors=None, parent=None):
+    def __init__(self, values=None, colors=None, mode='curve', datas=None, parent=None):
         QWidget.__init__(self, parent)
+
         self.setMouseTracking(True)
+        self.mode = mode
         self.numGrid, self.border = 25, 25
         self.clampx, self.clampy = 0, 0
         self.closestPoint = QPoint(0, 0)
         self.hoverPoly = QPolygon()
+        self.hoverCloud = QPainterPath()
+        self.hoverItem = None
+        self.datas = datas
         self.values = values
         self.colors = colors
         self.curves = list()
@@ -34,9 +41,11 @@ class Curves(QWidget, QObject):
     def setSaturation(self):
         coef = .8
         for key, color in self.colors.items():
-            color.setHsvF(color.hueF(), (color.saturationF() * coef), color.valueF() * coef)
+            color.setHsvF(
+                color.hueF(), (color.saturationF() * coef), color.valueF() * coef)
 
     def setInside(self):
+        ''' add values before and after to create a closed poly '''
 
         for key, value in self.values.items():
 
@@ -50,13 +59,14 @@ class Curves(QWidget, QObject):
 
         for values in self.values.values():
             for value in values[::2]:
-                if self.clampx < value: self.clampx = value
+                if self.clampx < value:
+                    self.clampx = value
 
             for value in values[1::2]:
-                if self.clampy < value: self.clampy = value
+                if self.clampy < value:
+                    self.clampy = value
 
-        # self.setGeometry(2500, 1500, 600, self.clampy + self.border)
-        self.setGeometry(500,500, 600, self.clampy + self.border)
+        self.setGeometry(1200, 1500, 600, 280)
         self.unit = self.size().width()/self.numGrid
 
     def getSum(self, key):
@@ -69,7 +79,6 @@ class Curves(QWidget, QObject):
         return self.getSum(key) / ((len(self.values[key])) * .5)
 
     def getLow(self, key):
-
         low = self.clampy
         for pos in self.values[key][1::2]:
             if pos < low:
@@ -91,11 +100,19 @@ class Curves(QWidget, QObject):
     def distance(self, A, B):
         return math.sqrt(math.pow((A.x()-B.x()), 2) + math.pow((A.y()-B.y()), 2))
 
+    def closeEvent(self, event):
+        path = os.path.dirname(self.datas[-1].thumbLoc)
+        if os.path.exists(path):
+            shutil.rmtree(path)
+
     def mouseReleaseEvent(self, event):
         self.previous = False
 
     # def resizeEvent(self, event):
     #     self.numGrid = int(self.width() * .1)
+
+    def resizeEvent(self, event):
+        self.update()
 
     def mouseMoveEvent(self, event):
 
@@ -117,7 +134,8 @@ class Curves(QWidget, QObject):
                 return
 
             out = event.globalPos() - self.prev
-            self.resize(self.prevSize.width() + out.x(), self.prevSize.height() + out.y())
+            self.resize(
+                self.prevSize.width() + out.x(), self.prevSize.height() + out.y())
 
         for key, values in self.pairs.items():
 
@@ -135,6 +153,15 @@ class Curves(QWidget, QObject):
 
                 self.update()
 
+        for i in xrange(len(self.clouds)):
+            if self.clouds[i].contains(event.pos()):
+                self.hoverCloud = self.clouds[i]
+                self.hoverItem = self.datas[i]
+                self.update()
+                break
+
+            self.hoverItem = None
+
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
             self.close()
@@ -142,8 +169,8 @@ class Curves(QWidget, QObject):
     def mousePressEvent(self, event):
 
         if event.buttons() == Qt.LeftButton:
-            print 'left'
-            self.update()
+            if self.hoverItem:
+                subprocess.call('firefox %s' % self.hoverItem.url, shell=True)
 
         if event.buttons() == Qt.RightButton:
             print 'right'
@@ -152,6 +179,7 @@ class Curves(QWidget, QObject):
 
         painter = QPainter(self)
         painter.setRenderHints(QPainter.Antialiasing | QPainter.TextAntialiasing)
+        self.coef = (self.height() - self.border) / float(self.clampy)
 
         # -- BACKGROUND
         gradColor = QColor(0, 30, 150)
@@ -166,18 +194,24 @@ class Curves(QWidget, QObject):
             for h in xrange(self.numGrid):
                 random.seed(h)
 
-                chestColor = QColor(48, 52, 58, 205).darker(random.uniform(100, 110))
-                if v % 2 == 0: painter.setBrush(QBrush(chestColor.darker(113)))
-                else: painter.setBrush(QBrush(chestColor))
+                chestColor = QColor(48, 52, 58, 205).darker(
+                    random.uniform(100, 110))
+                if v % 2 == 0:
+                    painter.setBrush(QBrush(chestColor.darker(113)))
+                else:
+                    painter.setBrush(QBrush(chestColor))
                 painter.setPen(QPen(QBrush(chestColor), 1))
-                painter.drawRect(h * self.unit, v * self.unit, self.unit-2, self.unit-2)
+                painter.drawRect(
+                    h * self.unit, v * self.unit, self.unit-2, self.unit-2)
 
         # -- GRIDS
         penColor = QColor(190, 190, 190, 40)
         for v in xrange(self.numGrid):
             # -- THICK
-            if v % 10 == 0: painter.setPen(QPen(penColor.lighter(190), .8, Qt.DashLine))
-            else: painter.setPen(QPen(penColor.darker(150), 1.8))
+            if v % 10 == 0:
+                painter.setPen(QPen(penColor.lighter(190), .8, Qt.DashLine))
+            else:
+                painter.setPen(QPen(penColor.darker(150), 1.8))
             painter.drawLine(v * self.unit, 0, v * self.unit, self.height())
             painter.drawLine(0, v * self.unit, self.width(), v * self.unit)
 
@@ -185,6 +219,61 @@ class Curves(QWidget, QObject):
             painter.setPen(QPen(penColor.lighter(350), .61))
             painter.drawLine(v * self.unit, 0, v * self.unit, self.height())
             painter.drawLine(0, v * self.unit, self.width(), v * self.unit)
+
+        if self.mode == 'curve':
+            self.paintCurve(painter)
+
+        if self.mode == 'cloud':
+            self.paintCloud(painter)
+
+    def paintCloud(self, painter):
+
+        self.clouds = list()
+        for key, values in self.values.items():
+
+            for i in xrange(2, len(values)-4, 2):
+                move = QPoint(values[i] * self.unit, self.height() - (values[i+1] * self.coef))
+                self.clouds.append(QPainterPath())
+                self.clouds[-1].addEllipse(move, 2, 2)
+
+                color = self.colors[key]
+                if self.hoverCloud == self.clouds[-1]:
+                    color.lighter(430)
+
+                painter.setPen(QPen(color, 1.3))
+                painter.drawPath(self.clouds[-1])
+
+            # -- thumb
+            if self.hoverItem:
+
+                s = 100
+                pixmap = QPixmap(s, s)
+                pixmap.load(self.hoverItem.thumbLoc, 'jpg')
+                painter.drawPixmap(self.width() - s - self.border, self.border, s, s, pixmap)
+
+                legends = QPainterPath()
+                font = QFont('FreeSans', 10, QFont.Light)
+
+                step = 16
+                legends = QPainterPath()
+                legends.addText(self.width()-s - self.border, self.border + s + step, font, 'Price: {:,} Eurs'.format(self.hoverItem.price))
+                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Rentabilite: {:.2f}'.format(self.hoverItem.ratio))
+                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Ratio: {:.0f}'.format(self.hoverItem.ratio))
+                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Surface: {}'.format(self.hoverItem.surface))
+                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Pieces: {}'.format(self.hoverItem.pieces))
+                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Ville: {}'.format(self.hoverItem.ville))
+                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Date: {}'.format(self.hoverItem.date))
+                # font.setPointSize(8)
+                # txt = self.hoverItem.desc
+                # txt = '\n'.join(txt.split('.'))
+                # legends.addText(0, self.height() - step, font, '{}'.format(txt))
+                # legends.addText(0, step, font, '{}'.format(txt))
+
+                painter.setPen(QPen(QColor(255, 255, 255, 155), .61))
+                painter.setBrush(QBrush(QColor(255, 255, 255, 255)))
+                painter.drawPath(legends)
+
+    def paintCurve(self, painter):
 
         # -- POLYS
         width = 3
@@ -194,7 +283,7 @@ class Curves(QWidget, QObject):
             poly = QPolygonF()
             for i in xrange(0, len(inside), 2):
                 x = inside[i] * self.unit
-                y = self.size().height() - inside[i+1]
+                y = self.height() - (inside[i+1] * self.coef)
 
                 poly << QPointF(x, y)
                 painter.setBrush(color.darker(215))
@@ -205,8 +294,10 @@ class Curves(QWidget, QObject):
 
             gradient = QLinearGradient(0, self.height() - self.clampy, 0, self.size().height())
 
-            if self.hoverPoly == poly: gradient.setColorAt(0, color.lighter(150))
-            else: gradient.setColorAt(0, color)
+            if self.hoverPoly == poly:
+                gradient.setColorAt(0, color.lighter(150))
+            else:
+                gradient.setColorAt(0, color)
 
             color.setAlpha(20)
             gradient.setColorAt(1, color.darker(220))
@@ -224,19 +315,22 @@ class Curves(QWidget, QObject):
             color.setAlpha(155)
 
             for i in xrange(2, len(values)-4, 2):
-                move = QPoint(values[i] * self.unit, self.size().height() - values[i+1])
-                line = QPoint(values[i+2] * self.unit, self.size().height() - values[i+3])
 
-                pourcent = ((self.height()-line.y()) - (self.height()-move.y())) / float(self.height() - move.y()) * 100
+                move = QPoint(values[i] * self.unit, self.height() - (values[i+1] * self.coef))
+                line = QPoint(values[i+2] * self.unit, self.height() - (values[i+3] * self.coef))
+
+                pourcent = ((self.height()-line.y()) - (self.height() - move.y())) / float(self.height() - move.y()) * 100
                 midPoint = move + ((line - move) * .5)
                 sign = '+' if pourcent > 0 else '-'
                 painter.setFont(QFont('FreeSans', 8.5, QFont.Light))
-                painter.drawText(midPoint, '{}{:0>.1f}%'.format(sign, abs(pourcent)))
+                painter.drawText(
+                    midPoint, '{}{:0>.1f}%'.format(sign, abs(pourcent)))
 
                 self.curves[-1].moveTo(move)
                 self.curves[-1].lineTo(line)
 
-                painter.setPen(QPen(QBrush(color.lighter(150)), 1.5, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+                painter.setPen(
+                    QPen(QBrush(color.lighter(150)), 1.5, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
                 painter.setBrush(QBrush(color))
 
             posLegend = self.curves[-1].currentPosition()
@@ -249,7 +343,9 @@ class Curves(QWidget, QObject):
         painter.setPen(QPen(QBrush(QColor(200, 200, 200, 200)), 1, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
 
         for v in xrange(self.numGrid):
-            painter.drawText(3, self.height() - (self.unit * v), str(self.unit * v))
+            # -- vertical
+            painter.drawText(3, self.height() - (self.unit * v * self.coef), str(self.unit * v))
+            # -- horizontal
             painter.drawText(v * self.unit, self.height(), str(v))
 
         # -- LEGENDS
@@ -272,9 +368,11 @@ class Curves(QWidget, QObject):
         painter.setPen(QPen(QColor(235, 235, 240, 200), 1))
         painter.drawPie(self.closestPoint.x() - (rad * .5), self.closestPoint.y() - (rad * .5), rad, rad, 30 * 16, 120 * 16)
 
-        text = '{:.1f}'.format(self.closestPoint.x()/self.unit)
+        # -- x
+        text = '{:.1f}'.format(self.closestPoint.x() / self.unit)
         painter.drawText(self.closestPoint + QPointF(rad, 0), text)
 
-        text = '{:.1f}'.format(self.height() - self.closestPoint.y())
+        # -- y
+        y = self.height() - (self.closestPoint.y())
+        text = '{:.1f}'.format(y)
         painter.drawText(self.closestPoint + QPointF(rad, rad), text)
-
