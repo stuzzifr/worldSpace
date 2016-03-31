@@ -172,7 +172,7 @@ class Curves(QWidget, QObject):
 
         if event.buttons() == Qt.LeftButton:
             if self.hoverItem:
-                webbrowser.open(self.hoverItem.url)
+                webbrowser.get('firefox').open_new_tab(self.hoverItem.url)
 
             else:
                 print 'no hoverITems'
@@ -185,6 +185,7 @@ class Curves(QWidget, QObject):
         painter = QPainter(self)
         painter.setRenderHints(QPainter.Antialiasing | QPainter.TextAntialiasing)
         self.coef = (self.height() - self.border) / float(self.clampy)
+        self.coefx = (self.width() - self.border) / float(self.clampx)
 
         # -- BACKGROUND
         gradColor = QColor(0, 30, 150)
@@ -237,9 +238,9 @@ class Curves(QWidget, QObject):
         for key, values in self.values.items():
 
             for i in xrange(2, len(values)-4, 2):
-                move = QPoint(values[i] * self.unit, self.height() - (values[i+1] * self.coef))
+                move = QPoint(values[i] * self.coefx, self.height() - (values[i+1] * self.coef))
                 self.clouds.append(QPainterPath())
-                self.clouds[-1].addEllipse(move, 3, 3)
+                self.clouds[-1].addEllipse(move, 2, 4)
 
                 color = self.colors[key]
                 if self.hoverCloud == self.clouds[-1]:
@@ -248,10 +249,10 @@ class Curves(QWidget, QObject):
                 painter.setPen(QPen(color, 1.3))
                 painter.drawPath(self.clouds[-1])
 
-            # -- thumb
             if self.hoverItem:
-
                 s = 100
+
+                # -- thumb
                 if self.hoverItem.thumbLoc:
 
                     pixmap = QPixmap(s, s)

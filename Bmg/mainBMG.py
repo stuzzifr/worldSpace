@@ -7,7 +7,7 @@ import Web
 db = pdb.set_trace
 
 
-class Win():
+class BLoom():
 
     def __init__(self, parent=None):
 
@@ -40,23 +40,22 @@ class Win():
 
         cloud = {'cloud': []}
         for bien in biens:
-            # -- change bien.price to renta
-            cloud['cloud'].extend([bien.datef, bien.price])
+            cloud['cloud'].extend([bien.datef, bien.renta])
 
-        self.setGraph(cloud, datas=biens)
-        # self.setGraph(values, colors)
+        self.setGraph(cloud, datas=biens, mode='cloud')
+        # self.setGraph(values, colors, mode='curves')
 
-    def setGraph(self, values, colors=None, datas=None):
+    def setGraph(self, values, colors=None, mode=None, datas=None):
 
         if not colors:
-            colors = {'cloud': QColor(255, 255, 0)}
+            colors = {'cloud': QColor(255, 255, 255, 190)}
 
         app = QApplication([])
-        graph = Graph.Curves(values, colors, 'cloud', datas)
+        graph = Graph.Curves(values, colors, mode, datas)
         # graph = Graph.Curves(values, colors, 'curve')
         graph.objectName()
         app.exec_()
 
 
 if __name__ == '__main__':
-    obj = Win()
+    obj = BLoom()

@@ -116,6 +116,9 @@ class Bien(object):
 
     @property
     def ratio(self):
+        if not int(self.surface):
+            return 0
+
         return float(self.price) / int(self.surface)
 
 
@@ -124,6 +127,7 @@ def getLinks(site='bonCoin'):
     print 'getting links...'
     links = list()
     for i in range(1, 99):
+        # -- http://www.leboncoin.fr/annonces/offres/aquitaine/dordogne/
         address = 'http://www.leboncoin.fr/ventes_immobilieres/offres/ile_de_france/seine_saint_denis/?o={}&ps=1&pe=4&ret=2'.format(i)
         try:
             sock = urllib.urlopen(address)
@@ -143,6 +147,7 @@ def getLinks(site='bonCoin'):
                     if ids[i] in link:
                         links.append(link)
 
+        # print 'extracting %s' % address
     return links
 
 
@@ -161,7 +166,7 @@ def getDatas(links, site='bonCoin'):
         sock.close()
 
         biens.append(Bien())
-        price = re.search(r'prix : "(\d+)', html)
+        price = re.search(r'prix : "([\d ]+)', html)
         ville = re.findall(r'PostalAddress">(.+) \d', html)
         date = re.search(r'Mise en ligne le (\d+ \w+)', html)
         thumb = re.search(r'images_thumbs\[0\] = "(.+)"', html)
@@ -184,7 +189,11 @@ def getDatas(links, site='bonCoin'):
 
         biens[-1].setInfos(url, price, surface, pieces, date, desc, thumb, ville)
 
-        if i % 10 == 0:
+        if not biens[-1].isValid:
+            biens.pop()
+            continue
+
+        if i % 25 == 0:
             print 'getDatas {:0>2.0f}%'.format((i*100.0/(len(links))))
 
     return biens
@@ -193,14 +202,20 @@ def getDatas(links, site='bonCoin'):
 def setRenta(biens, site='bonCoin'):
     # surface = [20, 100] sqs sqe numItems
     # pieces = [1, 4] ros roe
-    # type = '2 appart' ret
+    # type = [2] = appart ret
     # will miss region, ville
 
-    for bien in biens:
+    url = str()
+    for i, bien in enumerate(biens):
         surfacemin, surfacemax = getSurfaceRange(bien.surface)
-        # print 'pieces{} surface{} smin{} smax{}'.format(bien.pieces, bien.surface, surfacemin, surfacemax)
-        url = '''http://www.leboncoin.fr/locations/offres/ile_de_france/occasions/?o=1&sqs={}&sqe={}&ros={}&roe={}&ret=2
-        '''.format(surfacemin, surfacemax, bien.pieces, bien.pieces)
+
+        if bien.pieces == 0:
+            url = '''http://www.leboncoin.fr/locations/offres/ile_de_france/seine_saint_denis/?th=1&sqs={}&sqe={}&ret=2
+            '''.format(surfacemin, surfacemax)
+
+        else:
+            url = '''http://www.leboncoin.fr/locations/offres/ile_de_france/seine_saint_denis/?o=1&sqs={}&sqe={}&ros={}&roe={}&ret=2
+            '''.format(surfacemin, surfacemax, bien.pieces, bien.pieces)
 
         try:
             sock = urllib.urlopen(url)
@@ -211,7 +226,8 @@ def setRenta(biens, site='bonCoin'):
         html = sock.read()
         sock.close()
 
-        rents = re.findall(r'item_price">(\d+)', html)
+        rents = re.findall(r'item_price">([\d ]+)', html)
+        rents = [rent.replace(' ', '')for rent in rents]
 
         avg = 0.0
         for rent in rents:
@@ -223,7 +239,11 @@ def setRenta(biens, site='bonCoin'):
             bien.setRentAvg(avg)
 
         else:
-            print 'skipp', url
+            bien.setRenta(0)
+            print 'cannot find rent average of %s, skipped', url
+
+        if i % 25 == 0:
+            print 'setCloud {:0>2.0f}%'.format((i*100.0/(len(biens))))
 
 
 def getSurfaceRange(surface, site='bonCoin'):
