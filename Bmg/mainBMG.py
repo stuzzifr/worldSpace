@@ -11,10 +11,6 @@ class Win():
 
     def __init__(self, parent=None):
 
-        # -- valeur a passer dans la dico
-        # chrono = time.strptime('Sep 16', '%b %y')
-        # month, year = chrono[1], chrono[0]
-
         values = {'Cash': [0, 10,
                            1, 110,
                            2, 130,
@@ -40,9 +36,11 @@ class Win():
 
         links = Web.getLinks()
         biens = Web.getDatas(links)
+        Web.setRenta(biens)
 
         cloud = {'cloud': []}
         for bien in biens:
+            # -- change bien.price to renta
             cloud['cloud'].extend([bien.datef, bien.price])
 
         self.setGraph(cloud, datas=biens)

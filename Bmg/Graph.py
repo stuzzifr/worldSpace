@@ -252,9 +252,11 @@ class Curves(QWidget, QObject):
             if self.hoverItem:
 
                 s = 100
-                pixmap = QPixmap(s, s)
-                pixmap.load(self.hoverItem.thumbLoc, 'jpg')
-                painter.drawPixmap(self.width() - s - self.border, self.border, s, s, pixmap)
+                if self.hoverItem.thumbLoc:
+
+                    pixmap = QPixmap(s, s)
+                    pixmap.load(self.hoverItem.thumbLoc, 'jpg')
+                    painter.drawPixmap(self.width() - s - self.border, self.border, s, s, pixmap)
 
                 legends = QPainterPath()
                 font = QFont('FreeSans', 10, QFont.Light)
@@ -262,8 +264,9 @@ class Curves(QWidget, QObject):
                 step = 16
                 legends = QPainterPath()
                 legends.addText(self.width()-s - self.border, self.border + s + step, font, 'Price: {:,} Eurs'.format(self.hoverItem.price))
-                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Rentabilite: {:.2f}'.format(0.0))
-                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'prix\m2: {:.0f}'.format(self.hoverItem.ratio))
+                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Rentabilite: {:.1f}%'.format(self.hoverItem.renta))
+                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Loyer moyen: {:.0f}'.format(self.hoverItem.rentAvg))
+                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'prix\m2: {:,}'.format(int(self.hoverItem.ratio)))
                 legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Surface: {} m2'.format(self.hoverItem.surface))
                 legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Pieces: {}'.format(self.hoverItem.pieces))
                 legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Ville: {}'.format(self.hoverItem.ville))
