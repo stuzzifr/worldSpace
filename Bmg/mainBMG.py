@@ -28,6 +28,7 @@ colors = {'Cash': QColor(255, 0, 0),
           'Capital': QColor(255, 0, 255),
           }
 
+
 class BLoom():
 
     def __init__(self, parent=None):
@@ -43,8 +44,8 @@ class BLoom():
         for bien in biens:
             cloud['cloud'].extend([bien.datef, bien.renta])
 
-        colors = {'cloud':QColor(255, 255, 255, 100)}
-        self.setGraph(cloud, datas=biens, mode='cloud', color= colors)
+        colors = {'cloud': QColor(200, 200, 255, 80)}
+        self.setGraph(cloud, datas=biens, mode='cloud', colors=colors)
 
     def displayGraph(self):
         self.setGraph(values, colors, mode='curve')

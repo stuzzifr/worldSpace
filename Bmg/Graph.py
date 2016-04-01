@@ -245,11 +245,11 @@ class Curves(QWidget, QObject):
             for i in xrange(2, len(values)-4, 2):
                 move = QPoint(values[i] * self.coefx, self.height() - (values[i+1] * self.coef))
                 self.clouds.append(QPainterPath())
-                self.clouds[-1].addEllipse(move, 4.5, 4.5)
+                self.clouds[-1].addEllipse(move, 4, 4.5)
 
                 colorBorder = QColor()
                 if self.hoverCloud == self.clouds[-1]: colorBorder = QColor(255, 255, 255, 180)
-                else: colorBorder = QColor(0,0,0)
+                else: colorBorder = QColor(0, 0, 0)
 
                 painter.setBrush(QBrush(self.colors[key]))
 

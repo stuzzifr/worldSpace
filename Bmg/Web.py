@@ -78,6 +78,7 @@ class Bien(object):
         reg = re.search(r'(\d+)', date)
         if reg: day = float(reg.group(1)) / 31.0
 
+        print date
         return day + month
 
     @property
@@ -195,7 +196,6 @@ def getDatas(links, site='bonCoin'):
         thumb = '' if not thumb else thumb.group(1)
         ville = 'Unknown' if not ville else ville[0]
 
-
         biens[-1].setInfos(url, price, surface, pieces, date, desc, thumb, ville)
 
         if not biens[-1].isViager:
@@ -244,7 +244,6 @@ def setRenta(biens, site='bonCoin'):
             rent = rent.replace(' ', '')
             avg += int(rent)
 
-
         if rents:
             avg /= len(rents)
             bien.setRentAvg(avg)
@@ -252,17 +251,18 @@ def setRenta(biens, site='bonCoin'):
 
         else:
             bien.setInvalid()
-            print 'cannot find rent average', url
+            # print 'cannot find rent average', url
 
         if i % 10 == 0:
             percent = (i*100.0/(len(biens)))
-            print 'setCloud {:0>2.0f}% |{: <50}|'.format(percent, '.' * int(percent *.5))
+            print 'setCloud {:0>2.0f}% |{: <50}|'.format(percent, '.' * int(percent * .5))
 
     print '%d pages analysed' % len(biens)
 
+
 def getSurfaceRange(surface, site='bonCoin'):
 
-    if surface < 20 : return 1, 2
+    if surface < 20: return 1, 2
     if surface > 20 and surface < 25: return 2, 3
     if surface > 25 and surface < 29: return 3, 4
     if surface > 30 and surface < 34: return 4, 5
@@ -274,4 +274,4 @@ def getSurfaceRange(surface, site='bonCoin'):
     if surface > 80 and surface < 89: return 10, 11
     if surface > 90 and surface < 99: return 11, 12
 
-    else:return 1, 2
+    else: return 1, 2
