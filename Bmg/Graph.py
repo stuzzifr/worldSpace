@@ -18,6 +18,7 @@ class Curves(QWidget, QObject):
         QWidget.__init__(self, parent)
 
         self.setMouseTracking(True)
+        self.clouds = None
         self.mode = mode
         self.numGrid, self.border = 25, 25
         self.clampx, self.clampy = 0, 0
@@ -155,14 +156,15 @@ class Curves(QWidget, QObject):
 
                 self.update()
 
-        for i in xrange(len(self.clouds)):
-            if self.clouds[i].contains(event.pos()):
-                self.hoverCloud = self.clouds[i]
-                self.hoverItem = self.datas[i]
-                self.update()
-                break
+        if self.clouds:
+            for i in xrange(len(self.clouds)):
+                if self.clouds[i].contains(event.pos()):
+                    self.hoverCloud = self.clouds[i]
+                    self.hoverItem = self.datas[i]
+                    self.update()
+                    break
 
-            self.hoverItem = None
+                self.hoverItem = None
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
@@ -172,10 +174,13 @@ class Curves(QWidget, QObject):
 
         if event.buttons() == Qt.LeftButton:
             if self.hoverItem:
-                webbrowser.get('firefox').open_new_tab(self.hoverItem.url)
+                print 'opening ', self.hoverItem.url
 
-            else:
-                print 'no hoverITems'
+                if os.name == 'posix':
+                    webbrowser.get('firefox').open_new_tab(self.hoverItem.url)
+
+                if os.name == 'nt':
+                    webbrowser.open(self.hoverItem.url)
 
         if event.buttons() == Qt.RightButton:
             print 'right'
@@ -240,43 +245,39 @@ class Curves(QWidget, QObject):
             for i in xrange(2, len(values)-4, 2):
                 move = QPoint(values[i] * self.coefx, self.height() - (values[i+1] * self.coef))
                 self.clouds.append(QPainterPath())
-                self.clouds[-1].addEllipse(move, 2, 4)
+                self.clouds[-1].addEllipse(move, 4.5, 4.5)
 
-                color = self.colors[key]
-                if self.hoverCloud == self.clouds[-1]:
-                    color.lighter(430)
+                colorBorder = QColor()
+                if self.hoverCloud == self.clouds[-1]: colorBorder = QColor(255, 255, 255, 180)
+                else: colorBorder = QColor(0,0,0)
 
-                painter.setPen(QPen(color, 1.3))
+                painter.setBrush(QBrush(self.colors[key]))
+
+                painter.setPen(QPen(colorBorder, 1.3))
                 painter.drawPath(self.clouds[-1])
 
             if self.hoverItem:
                 s = 100
-
                 # -- thumb
                 if self.hoverItem.thumbLoc:
 
                     pixmap = QPixmap(s, s)
                     pixmap.load(self.hoverItem.thumbLoc, 'jpg')
-                    painter.drawPixmap(self.width() - s - self.border, self.border, s, s, pixmap)
+                    painter.drawPixmap(8, 8, s, s, pixmap)
 
                 legends = QPainterPath()
                 font = QFont('FreeSans', 10, QFont.Light)
 
-                step = 16
+                step = 14
                 legends = QPainterPath()
-                legends.addText(self.width()-s - self.border, self.border + s + step, font, 'Price: {:,} Eurs'.format(self.hoverItem.price))
-                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Rentabilite: {:.1f}%'.format(self.hoverItem.renta))
-                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Loyer moyen: {:.0f}'.format(self.hoverItem.rentAvg))
-                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'prix\m2: {:,}'.format(int(self.hoverItem.ratio)))
-                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Surface: {} m2'.format(self.hoverItem.surface))
-                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Pieces: {}'.format(self.hoverItem.pieces))
-                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Ville: {}'.format(self.hoverItem.ville))
-                legends.addText(self.width()-s - self.border, legends.boundingRect().bottom() + step, font, 'Date: {}'.format(self.hoverItem.date))
-                # font.setPointSize(8)
-                # txt = self.hoverItem.desc
-                # txt = '\n'.join(txt.split('.'))
-                # legends.addText(0, self.height() - step, font, '{}'.format(txt))
-                # legends.addText(0, step, font, '{}'.format(txt))
+                legends.addText(10, 10 + s, font, 'Price: {:,} Eurs'.format(self.hoverItem.price))
+                legends.addText(10, legends.boundingRect().bottom() + step, font, 'Rentabilite: {:.1f}%'.format(self.hoverItem.renta))
+                legends.addText(10, legends.boundingRect().bottom() + step, font, 'Loyer moyen: {:.0f}'.format(self.hoverItem.rentAvg))
+                legends.addText(10, legends.boundingRect().bottom() + step, font, 'prix\m2: {:,}'.format(int(self.hoverItem.ratio)))
+                legends.addText(10, legends.boundingRect().bottom() + step, font, 'Surface: {} m2'.format(self.hoverItem.surface))
+                legends.addText(10, legends.boundingRect().bottom() + step, font, 'Pieces: {}'.format(self.hoverItem.pieces))
+                legends.addText(10, legends.boundingRect().bottom() + step, font, 'Ville: {}'.format(self.hoverItem.ville))
+                legends.addText(10, legends.boundingRect().bottom() + step, font, 'Date: {}'.format(self.hoverItem.date))
 
                 painter.setPen(QPen(QColor(255, 255, 255, 155), .61))
                 painter.setBrush(QBrush(QColor(255, 255, 255, 255)))

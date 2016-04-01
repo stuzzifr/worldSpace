@@ -7,6 +7,7 @@ db = pdb.set_trace
 
 class Bien(object):
 
+    isViager = True
     isValid = True
 
     def __init__(self):
@@ -14,7 +15,10 @@ class Bien(object):
 
     def setInfos(self, url, price, surface, pieces, date, desc, thumb, ville):
         if 'viager' in desc.lower():
-            self.isValid = False
+            self.isViager = False
+
+        if 'viagier' in desc.lower():
+            self.isViager = False
 
         self._url = url
         self._price = price
@@ -24,6 +28,11 @@ class Bien(object):
         self._desc = desc
         self._thumb = thumb
         self._ville = ville
+
+    def setInvalid(self):
+        self.isValid = False
+        self.setRentAvg(0)
+        self.setRenta(1)
 
     def setRentAvg(self, avg):
         self._rentAvg = avg
@@ -67,7 +76,7 @@ class Bien(object):
         if 'decembre' in date: month = 12
 
         reg = re.search(r'(\d+)', date)
-        if reg: day = 31 / float(reg.group(1))
+        if reg: day = float(reg.group(1)) / 31.0
 
         return day + month
 
@@ -124,7 +133,6 @@ class Bien(object):
 
 def getLinks(site='bonCoin'):
 
-    print 'getting links...'
     links = list()
     for i in range(1, 99):
         # -- http://www.leboncoin.fr/annonces/offres/aquitaine/dordogne/
@@ -133,7 +141,7 @@ def getLinks(site='bonCoin'):
             sock = urllib.urlopen(address)
         except IOError:
             print '%s does not exists' % address
-            break
+            continue
 
         html = sock.read()
         sock.close()
@@ -142,12 +150,16 @@ def getLinks(site='bonCoin'):
         ids = re.findall(r'ad_listid" : "(\d+)', html)
 
         if ids:
-            for i in xrange(len(ids)):
+            for o in xrange(len(ids)):
                 for link in rawLinks:
-                    if ids[i] in link:
+                    if ids[o] in link:
                         links.append(link)
 
-        # print 'extracting %s' % address
+        else:
+            break
+
+        print 'parsing url {}'.format(i)
+
     return links
 
 
@@ -159,6 +171,7 @@ def getDatas(links, site='bonCoin'):
 
     biens = list()
 
+    # for i, link in enumerate(links[:98]):
     for i, link in enumerate(links):
         url = 'http:%s' % link
         sock = urllib.urlopen(url)
@@ -182,20 +195,18 @@ def getDatas(links, site='bonCoin'):
         thumb = '' if not thumb else thumb.group(1)
         ville = 'Unknown' if not ville else ville[0]
 
-        if None in [price, ville, date, pieces, surface]:
-            biens.pop()
-            print 'skip ', url
-            continue
 
         biens[-1].setInfos(url, price, surface, pieces, date, desc, thumb, ville)
 
-        if not biens[-1].isValid:
+        if not biens[-1].isViager:
             biens.pop()
             continue
 
-        if i % 25 == 0:
-            print 'getDatas {:0>2.0f}%'.format((i*100.0/(len(links))))
+        if i % 10 == 0:
+            percent = i*100.0/(len(links))
+            print 'getDatas {:0>2.0f}% |{: <50}|'.format(percent, '.' * int(percent * .5))
 
+    print '%d properties found' % len(biens)
     return biens
 
 
@@ -207,15 +218,15 @@ def setRenta(biens, site='bonCoin'):
 
     url = str()
     for i, bien in enumerate(biens):
-        surfacemin, surfacemax = getSurfaceRange(bien.surface)
 
+        surfacemin, surfacemax = getSurfaceRange(bien.surface)
         if bien.pieces == 0:
-            url = '''http://www.leboncoin.fr/locations/offres/ile_de_france/seine_saint_denis/?th=1&sqs={}&sqe={}&ret=2
-            '''.format(surfacemin, surfacemax)
+            url = '''http://www.leboncoin.fr/locations/offres/ile_de_france/seine_saint_denis/?th=1&location={}&sqs={}&sqe={}&ret=2
+            '''.format(bien.ville, surfacemin, surfacemax)
 
         else:
-            url = '''http://www.leboncoin.fr/locations/offres/ile_de_france/seine_saint_denis/?o=1&sqs={}&sqe={}&ros={}&roe={}&ret=2
-            '''.format(surfacemin, surfacemax, bien.pieces, bien.pieces)
+            url = '''http://www.leboncoin.fr/locations/offres/ile_de_france/seine_saint_denis/?th=1&location={}&sqs={}&sqe={}&ros={}&roe={}&ret=2
+            '''.format(bien.ville, surfacemin, surfacemax, bien.pieces, bien.pieces, bien.ville)
 
         try:
             sock = urllib.urlopen(url)
@@ -227,39 +238,40 @@ def setRenta(biens, site='bonCoin'):
         sock.close()
 
         rents = re.findall(r'item_price">([\d ]+)', html)
-        rents = [rent.replace(' ', '')for rent in rents]
 
         avg = 0.0
         for rent in rents:
+            rent = rent.replace(' ', '')
             avg += int(rent)
+
 
         if rents:
             avg /= len(rents)
-            bien.setRenta((avg * 12 * 100) / bien.price)
             bien.setRentAvg(avg)
+            bien.setRenta((avg * 12 * 100) / bien.price)
 
         else:
-            bien.setRenta(0)
-            print 'cannot find rent average of %s, skipped', url
+            bien.setInvalid()
+            print 'cannot find rent average', url
 
-        if i % 25 == 0:
-            print 'setCloud {:0>2.0f}%'.format((i*100.0/(len(biens))))
+        if i % 10 == 0:
+            percent = (i*100.0/(len(biens)))
+            print 'setCloud {:0>2.0f}% |{: <50}|'.format(percent, '.' * int(percent *.5))
 
+    print '%d pages analysed' % len(biens)
 
 def getSurfaceRange(surface, site='bonCoin'):
 
-    smin, smax = 1, 2
+    if surface < 20 : return 1, 2
+    if surface > 20 and surface < 25: return 2, 3
+    if surface > 25 and surface < 29: return 3, 4
+    if surface > 30 and surface < 34: return 4, 5
+    if surface > 35 and surface < 39: return 5, 6
+    if surface > 40 and surface < 49: return 6, 7
+    if surface > 50 and surface < 59: return 7, 8
+    if surface > 60 and surface < 69: return 8, 9
+    if surface > 70 and surface < 79: return 9, 10
+    if surface > 80 and surface < 89: return 10, 11
+    if surface > 90 and surface < 99: return 11, 12
 
-    if surface > 20 and surface < 25: smin, smax = 2, 3
-    if surface > 25 and surface < 29: smin, smax = 3, 4
-    if surface > 30 and surface < 34: smin, smax = 4, 5
-    if surface > 35 and surface < 39: smin, smax = 5, 6
-    if surface > 40 and surface < 49: smin, smax = 6, 7
-    if surface > 50 and surface < 59: smin, smax = 7, 8
-    if surface > 60 and surface < 69: smin, smax = 8, 9
-    if surface > 70 and surface < 79: smin, smax = 9, 10
-    if surface > 80 and surface < 89: smin, smax = 10, 11
-    if surface > 90 and surface < 99: smin, smax = 11, 12
-
-    return smin, smax
-
+    else:return 1, 2
