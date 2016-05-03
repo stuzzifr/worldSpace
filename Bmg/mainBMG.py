@@ -1,5 +1,6 @@
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
+from Pret import *
 import Graph, Web
 import pdb
 
@@ -38,6 +39,7 @@ class BLoom():
 
         links = Web.getLinks()
         biens = Web.getDatas(links)
+        print 'biens ', biens
         Web.setRenta(biens)
 
         cloud = {'cloud': []}
@@ -47,13 +49,18 @@ class BLoom():
         colors = {'cloud': QColor(200, 200, 255, 80)}
         self.setGraph(cloud, datas=biens, mode='cloud', colors=colors)
 
-    def displayGraph(self):
-        self.setGraph(values, colors, mode='curve')
+    def displayGraph(self, val, col=None):
+        if not col:
+            col = dict()
+            for i in val.keys():
+                col.setdefault(i, QColor(100, 100, 100))
+
+        self.setGraph(val, col, mode='curve')
 
     def setGraph(self, values, colors=None, mode=None, datas=None):
 
         if not colors:
-            colors = {'cloud': QColor(255, 255, 255, 190)}
+            colors = {'cloud': QColor(255, 255, 255, 90)}
 
         app = QApplication([])
         graph = Graph.Curves(values, colors, mode, datas)
@@ -62,6 +69,22 @@ class BLoom():
 
 
 if __name__ == '__main__':
-    obj = BLoom()
-    obj.displayCloud()
-    # obj.displayGraph()
+    # obj.displayCloud()
+    # bloom = BLoom()
+    # bloom.displayGraph(pret.fluxM)
+    # bloom.displayGraph(values)
+    # obj.displayGraph(flux)
+
+    pret = Classique(cout=45000,
+                  taux=1.3,
+                  annees=14,
+                  loyer=400,
+                  charges=30,
+                  fonciere=700,
+                  ass=680,
+                  occupation=12
+                  )
+
+    Simu(pret)
+    for year, values in pret.sheet.items():
+        print year, values

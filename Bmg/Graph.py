@@ -18,10 +18,11 @@ class Curves(QWidget, QObject):
         QWidget.__init__(self, parent)
 
         self.setMouseTracking(True)
+        self.city = QPainterPath()
         self.clouds = None
         self.mode = mode
-        self.numGrid, self.border = 25, 25
-        self.clampx, self.clampy = 0, 0
+        self.numGrid = self.border = 25
+        self.clampx = self.clampy = 0
         self.closestPoint = QPoint(0, 0)
         self.hoverPoly = QPolygon()
         self.hoverCloud = QPainterPath()
@@ -41,6 +42,9 @@ class Curves(QWidget, QObject):
         self.show()
 
     def setSaturation(self):
+
+        if self.mode == 'cloud': return
+
         coef = .8
         for key, color in self.colors.items():
             color.setHsvF(
@@ -111,11 +115,8 @@ class Curves(QWidget, QObject):
     def mouseReleaseEvent(self, event):
         self.previous = False
 
-    # def resizeEvent(self, event):
-    #     self.numGrid = int(self.width() * .1)
-
     def resizeEvent(self, event):
-        self.update()
+        self.numGrid = int(self.width() * .05)
 
     def mouseMoveEvent(self, event):
 
@@ -239,7 +240,9 @@ class Curves(QWidget, QObject):
 
     def paintCloud(self, painter):
 
+
         self.clouds = list()
+        font = QFont('FreeSans', 10, QFont.Light)
         for key, values in self.values.items():
 
             for i in xrange(2, len(values)-4, 2):
@@ -266,7 +269,6 @@ class Curves(QWidget, QObject):
                     painter.drawPixmap(8, 8, s, s, pixmap)
 
                 legends = QPainterPath()
-                font = QFont('FreeSans', 10, QFont.Light)
 
                 step = 14
                 legends = QPainterPath()
@@ -282,6 +284,16 @@ class Curves(QWidget, QObject):
                 painter.setPen(QPen(QColor(255, 255, 255, 155), .61))
                 painter.setBrush(QBrush(QColor(255, 255, 255, 255)))
                 painter.drawPath(legends)
+
+        # w, h = 90, 20
+        # fontText = QFont('FreeSans', 11, QFont.Light)
+
+        # painter.setBrush(QBrush(QColor(255, 255, 255, 205)))
+        # painter.setPen(QPen(QColor(0,0,0)))
+        # self.city.addRoundedRect(self.width() - w-5, 5, w, h, 5,5)
+
+        # self.city.addText(self.city.boundingRect().bottomLeft(), fontText, 'ileDeFrance')
+        # painter.drawPath(self.city)
 
     def paintCurve(self, painter):
 

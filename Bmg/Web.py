@@ -4,6 +4,10 @@ import pdb
 
 db = pdb.set_trace
 
+# DEPARTEMENT = 'aquitaine/dordogne/'
+DEPARTEMENT = 'ile_de_france/seine_saint_denis'
+VILLE = 'Noisy-le-Sec 93130'
+
 
 class Bien(object):
 
@@ -63,7 +67,7 @@ class Bien(object):
         day = float()
 
         if 'janvier' in date: month = 1
-        if 'fevrier' in date: month = 2
+        if 'f' in date: month = 2
         if 'mars' in date: month = 3
         if 'avril' in date: month = 4
         if 'mai' in date: month = 5
@@ -78,7 +82,7 @@ class Bien(object):
         reg = re.search(r'(\d+)', date)
         if reg: day = float(reg.group(1)) / 31.0
 
-        print date
+        print date, day+month
         return day + month
 
     @property
@@ -134,32 +138,38 @@ class Bien(object):
 
 def getLinks(site='bonCoin'):
 
+    piecemin = 2
+    piecemax = 3
     links = list()
-    for i in range(1, 99):
-        # -- http://www.leboncoin.fr/annonces/offres/aquitaine/dordogne/
-        address = 'http://www.leboncoin.fr/ventes_immobilieres/offres/ile_de_france/seine_saint_denis/?o={}&ps=1&pe=4&ret=2'.format(i)
-        try:
-            sock = urllib.urlopen(address)
-        except IOError:
-            print '%s does not exists' % address
-            continue
+    if site == 'bonCoin':
+        for i in range(1, 99):
+            address = 'http://www.leboncoin.fr/ventes_immobilieres/offres/{}/?o={}&location={}&ps={}&pe={}&ret=2'.format(DEPARTEMENT, i, VILLE, piecemin, piecemax)
 
-        html = sock.read()
-        sock.close()
+            try:
+                sock = urllib.urlopen(address)
+            except IOError:
+                print '%s does not exists' % address
+                continue
 
-        rawLinks = re.findall(r'href="(.+)" title', html)
-        ids = re.findall(r'ad_listid" : "(\d+)', html)
+            html = sock.read()
+            sock.close()
 
-        if ids:
-            for o in xrange(len(ids)):
-                for link in rawLinks:
-                    if ids[o] in link:
-                        links.append(link)
+            rawLinks = re.findall(r'href="(.+)" title', html)
+            ids = re.findall(r'ad_listid" : "(\d+)', html)
 
-        else:
-            break
+            if ids:
+                for o in xrange(len(ids)):
+                    for link in rawLinks:
+                        if ids[o] in link:
+                            links.append(link)
 
-        print 'parsing url {}'.format(i)
+            else:
+                break
+
+            print 'parsing leBonCoin {}'.format(i)
+
+    if site == 'pap':
+        print 'parsing pap {}'.format(i)
 
     return links
 
@@ -167,12 +177,12 @@ def getLinks(site='bonCoin'):
 def getDatas(links, site='bonCoin'):
 
     if not links:
-        print 'no links found'
+        raise Exception('no links found')
         return
 
     biens = list()
 
-    # for i, link in enumerate(links[:98]):
+    # for i, link in enumerate(links[:8]):
     for i, link in enumerate(links):
         url = 'http:%s' % link
         sock = urllib.urlopen(url)
@@ -206,58 +216,71 @@ def getDatas(links, site='bonCoin'):
             percent = i*100.0/(len(links))
             print 'getDatas {:0>2.0f}% |{: <50}|'.format(percent, '.' * int(percent * .5))
 
+    if not biens:
+        raise Exception('no biens found, make sure the url are valid')
+
     print '%d properties found' % len(biens)
     return biens
 
 
 def setRenta(biens, site='bonCoin'):
+    # boncoin
     # surface = [20, 100] sqs sqe numItems
     # pieces = [1, 4] ros roe
     # type = [2] = appart ret
     # will miss region, ville
 
+    # pap
+    # http://www.pap.fr/annonce/vente-appartements-saint-denis-93-g43705-a-partir-du-2-pieces-entre-55000-et-99000-euros-entre-21-et-33-m2
+    # surface =
+
     url = str()
-    for i, bien in enumerate(biens):
+    if site == 'pap':
+        pass
 
-        surfacemin, surfacemax = getSurfaceRange(bien.surface)
-        if bien.pieces == 0:
-            url = '''http://www.leboncoin.fr/locations/offres/ile_de_france/seine_saint_denis/?th=1&location={}&sqs={}&sqe={}&ret=2
-            '''.format(bien.ville, surfacemin, surfacemax)
 
-        else:
-            url = '''http://www.leboncoin.fr/locations/offres/ile_de_france/seine_saint_denis/?th=1&location={}&sqs={}&sqe={}&ros={}&roe={}&ret=2
-            '''.format(bien.ville, surfacemin, surfacemax, bien.pieces, bien.pieces, bien.ville)
+    if site == 'bonCoin':
+        for i, bien in enumerate(biens):
 
-        try:
-            sock = urllib.urlopen(url)
-        except IOError:
-            print '%s url doesnt exsts' % url
-            continue
+            surfacemin, surfacemax = getSurfaceRange(bien.surface)
+            if bien.pieces == 0:
+                url = '''http://www.leboncoin.fr/locations/offres/{}/?th=1&location={}&sqs={}&sqe={}&ret=2
+                '''.format(DEPARTEMENT, bien.ville, surfacemin, surfacemax)
 
-        html = sock.read()
-        sock.close()
+            else:
+                url = '''http://www.leboncoin.fr/locations/offres/{}/?th=1&location={}&sqs={}&sqe={}&ros={}&roe={}&ret=2
+                '''.format(DEPARTEMENT, bien.ville, surfacemin, surfacemax, bien.pieces, bien.pieces, bien.ville)
 
-        rents = re.findall(r'item_price">([\d ]+)', html)
+            try:
+                sock = urllib.urlopen(url)
+            except IOError:
+                print '%s url doesnt exsts' % url
+                continue
 
-        avg = 0.0
-        for rent in rents:
-            rent = rent.replace(' ', '')
-            avg += int(rent)
+            html = sock.read()
+            sock.close()
 
-        if rents:
-            avg /= len(rents)
-            bien.setRentAvg(avg)
-            bien.setRenta((avg * 12 * 100) / bien.price)
+            rents = re.findall(r'item_price">([\d ]+)', html)
 
-        else:
-            bien.setInvalid()
-            # print 'cannot find rent average', url
+            avg = 0.0
+            for rent in rents:
+                rent = rent.replace(' ', '')
+                avg += int(rent)
 
-        if i % 10 == 0:
-            percent = (i*100.0/(len(biens)))
-            print 'setCloud {:0>2.0f}% |{: <50}|'.format(percent, '.' * int(percent * .5))
+            if rents:
+                avg /= len(rents)
+                bien.setRentAvg(avg)
+                bien.setRenta((avg * 12 * 100) / bien.price)
 
-    print '%d pages analysed' % len(biens)
+            else:
+                bien.setInvalid()
+                # print 'cannot find rent average', url
+
+            if i % 10 == 0:
+                percent = (i*100.0/(len(biens)))
+                print 'average rent {:0>2.0f}% |{: <50}|'.format(percent, '.' * int(percent * .5))
+
+        print '%d pages analysed' % len(biens)
 
 
 def getSurfaceRange(surface, site='bonCoin'):
