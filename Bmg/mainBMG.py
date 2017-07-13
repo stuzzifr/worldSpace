@@ -1,10 +1,14 @@
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
-from Pret import *
-import Graph, Web
-import pdb
 
-db = pdb.set_trace
+from Pret import *
+from Epargne import *
+from Impots import *
+from Regime import *
+from Study import *
+
+import Graph
+import Web
 
 values = {'Cash': [0, 10,
                    1, 110,
@@ -67,24 +71,25 @@ class BLoom():
         graph.objectName()
         app.exec_()
 
-
 if __name__ == '__main__':
+    # obj = BLoom()
     # obj.displayCloud()
-    # bloom = BLoom()
-    # bloom.displayGraph(pret.fluxM)
-    # bloom.displayGraph(values)
-    # obj.displayGraph(flux)
+    # obj.displayGraph(values)
 
-    pret = Classique(cout=45000,
-                  taux=1.3,
-                  annees=14,
-                  loyer=400,
-                  charges=30,
-                  fonciere=700,
-                  ass=680,
-                  occupation=12
-                  )
+    av = AssuranceV(start=100000, year=8, taux=8, pot=0)
+    print av
 
-    Simu(pret)
-    for year, values in pret.sheet.items():
-        print year, values
+    pret = Classique(cout=120000, taux=1.50, annees=20, loyer=900,
+                     charges=128, fonciere=156, ass=2680, occupation=12,
+                     travaux=0, notaire=0, apport=0
+                     )
+
+    regime = Regime(pret, 'BICreel')
+    # print pret
+    # print regime
+#
+    # impot = Revenu(revenu=126770, quotePart=2.5)
+    # foncier = Foncier(impot, foncier=5400)
+
+    # obj = Renta(prix=129000, surface=45, travaux=10000, loyer=1000 )
+    # print obj.getCost( )

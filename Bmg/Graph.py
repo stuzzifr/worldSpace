@@ -341,7 +341,11 @@ class Curves(QWidget, QObject):
                 move = QPoint(values[i] * self.unit, self.height() - (values[i+1] * self.coef))
                 line = QPoint(values[i+2] * self.unit, self.height() - (values[i+3] * self.coef))
 
-                pourcent = ((self.height()-line.y()) - (self.height() - move.y())) / float(self.height() - move.y()) * 100
+                try:
+                    pourcent = ((self.height()-line.y()) - (self.height() - move.y())) / float(self.height() - move.y()) * 100
+                except:
+                    pourcent = 1
+
                 midPoint = move + ((line - move) * .5)
                 sign = '+' if pourcent > 0 else '-'
                 painter.setFont(QFont('FreeSans', 8.5, QFont.Light))
