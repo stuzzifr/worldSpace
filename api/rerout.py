@@ -49,7 +49,7 @@ class Mesh(object):
         self._itVert = None
 
         if not self.iterV.count() == 2:
-            raise Exception("not correspondance")
+            raise Exception("no correspondance")
 
         for i in range(2):
 
