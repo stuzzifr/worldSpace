@@ -95,6 +95,7 @@ class Mesh(object):
             if i == 1:
                 self._endVert = Point(i)
 
+
     @classmethod
     def dag(cls):
 
