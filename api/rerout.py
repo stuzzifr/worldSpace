@@ -55,7 +55,6 @@ class Point(object):
 
         return num
 
-
     def setTo(self, num):
 
         util = MScriptUtil()
@@ -78,7 +77,6 @@ class Mesh(object):
 
     def __init__(self):
 
-
         self._startVert = None
         self._endVert = None
         self._itVert = None
@@ -94,7 +92,6 @@ class Mesh(object):
 
             if i == 1:
                 self._endVert = Point(i)
-
 
     @classmethod
     def dag(cls):
@@ -211,6 +208,7 @@ class Face(object):
                     break
 
         return leftVtx
+
 
 class Rerout(object):
 
