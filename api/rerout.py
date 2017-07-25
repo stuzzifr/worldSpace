@@ -8,27 +8,14 @@ import pdb
 db = pdb.set_trace
 
 
-def biggestAngle(A, B, C):
-    """Description
-    A: anchor as MPoint
-    B: other MPoint
-    C: other MPoint
-    """
-    v1 = B - A
-    v2 = C - A
-    Aangle = v1.angle(v2)
+def reorder(array, ind):
 
-    v1 = C - B
-    v2 = A - B
-    Bangle = v1.angle(v2)
+    ind = array.index(ind)
 
-    v1 = B - C
-    v2 = A - C
-    Cangle = v1.angle(v2)
+    sortArray = array[ind:]
+    sortArray += array[0:ind]
 
-    angles = [Aangle, Bangle, Cangle]
-    return angles.sort(reverse=True)
-
+    return sortArray[1:]
 
 class Point(object):
 
@@ -94,40 +81,64 @@ class Point(object):
 
         return util.getInt(VtxPtr)
 
-    def getLeftVtx(self, preFace):
+    @property
+    def capital(self):
+        """how many tris around the vert
+        8 is normal : only quad or split quads
+        the 7th is the good one
+        """
+
+        capital = 0
+
+        for face in self.facesAround:
+
+            f = Face(face)
+
+            if f.nature == 'tri':
+                capital += 1
+
+            if f.nature == 'quad':
+                capital += 2
+
+            if f.nature == 'cinq':
+                capital += 3
+
+        return capital
+
+
+    def getLeftFace(self, preFace):
         """ Description
         preface as int()
         """
 
-        faces = self.reorderFaces(self.facesAround, preFace)
+        faces = reorder(self.facesAround, preFace)
 
         lastFace = Face(faces[-1])
 
-        # get connected edges
-        # for each poly check if edges in this poly
-        # then minus capital
-
-        if lastFace.nature == 'quad':
+        if lastFace.nature == 'quad' and self.capital == 8:
+            print 'first'
             return faces[-1]
 
-        if self.index in lastFace.vtx and lastFace.nature == 'tri':
+        elif lastFace.nature == 'quad' and self.capital == 7:
+            print 'second'
+            return faces[-1]
+
+        elif lastFace.nature == 'tri' and self.capital == 7:
+            print 'third'
+            return faces[-1]
+
+        elif lastFace.nature == 'tri' and self.capital == 8:
+            print 'fourth'
             return faces[-2]
 
-        if lastFace.nature == 'tri' and self.index not in lastFace.vtx:
-            return faces[-2]
+        else:
+            raise Exception('''cannot find this scenario
+                index: %s
+                nature: %s
+                capital: %s''' % (self.index, lastFace.nature, self.capital))
 
-        # -- then do the same for vtx (ccw check)
 
-        return -1
 
-    def reorderFaces(self, facesArray, preface):
-
-        ind = facesArray.index(preface)
-
-        nw = facesArray[ind:]
-        nw += facesArray[0:ind]
-
-        return nw[1:]
 
 
 class Edge(object):
@@ -248,6 +259,7 @@ class Face(object):
 
         return [around[i] for i in range(around.length())]
 
+
     def setTo(self, num):
 
         util = MScriptUtil()
@@ -267,28 +279,31 @@ class Face(object):
 
         biggestAngle(P2.pos, P1.pos, P3.pos)
 
-    def getLeftVtxTEMP(self):
+    def getLeftVtx(self, anchor):
         # -- vertice of the left, poly creation is anti CW
 
-        leftVtx = -1
-        anchorP = Point(self.anchor)
+        sortedVtx = reorder(self.vtx, anchor)
+        return sortedVtx[-1]
 
-        if self.fn.nature == 'cinq':
-            for i in range(1, 3):
-                anchorP.setTo(self.vtx[self.anchor - i])
 
-                if len(anchorP.numEdges) == 4:
-                    leftVtx = anchorP.index()
-                    break
+    def getTurkish(self):
 
-        if self.fn.nature == 'quad':
-            for i in range(1, 2):
-                anchorP.setTo(self.vtx[self.anchor - i])
+        facesAround = MIntArray()
+        self.fn.getConnectedFaces(facesAround)
 
-                if len(anchorP.numEdges) == 4:
-                    leftVtx = anchorP.index()
-                    break
-        return leftVtx
+        for f in xrange(facesAround):
+            face = Face(f)
+
+            if face.
+
+            aroundSet = set(facesAround)
+            currentSet = set(self.vtx)
+
+            res = aroundSet.difference(currentSet)
+
+            if res == 1:
+                return f
+
 
 
 class Mesh(object):
@@ -383,53 +398,32 @@ class Rerout(object):
 
         self.mesh = Mesh()
         self.mesh.way = 1  # -- need to determine the direction
-        self.mesh.preFace = 14  # -- need to determine which face
+        self.mesh.preFace = 44  # -- need to determine which face
 
         self.analyse()
 
     def analyse(self):
 
-        print 'mesh.startVert ', self.mesh.startVert.index
-        print 'mesh.endVert ', self.mesh.endVert.index
-
         vert = self.mesh.startVert
+        poses = MPointArray()
 
-        for i in range(3):  # -- search distance
 
-            print '/n****loop', i
+        # need to add turkish face when capital 7
+        for i in range(6):  # -- search distance
 
-            leftVert = vert.getLeftVtx(self.mesh.preFace)
+            leftFace = vert.getLeftFace(self.mesh.preFace)
 
-            # face.anchor = vert
+            f = Face(leftFace)
+            leftVtx = f.getLeftVtx(vert.index)
 
-            outString = ' v.{} -- face:{} -- leftFace:{}'
-
+            outString = 'v.{} -- leftFace:{}, -- leftVtx:{}\n'
             print outString.format(vert.index,
-                                   vert.facesAround,
-                                   leftVert
+                                   leftFace,
+                                   leftVtx,
                                    )
 
-            # vert = foundVert
-            # self.mesh.preVert = vert
-            # self.mesh.preFace = face
+            self.mesh.preFace = leftFace
+            vert = Point(leftVtx)
 
-# Anchor angle (consecutive edges on quad poly)
-# Anchor angle (if tris, consetcutive if biggest angle degree)
-# Anchor angle (if tris, next + 1 if not biggest angle degree)
-
-
-# Get first vert
-# Get faces around (faceA)
-# PreVert = -1
-# PreFace = -1
-
-# For each face
-    # check how much polys connected to the vert ??
-    # if face is preFace or preVert in face.vertAround
-        # continue
-
-    # check nature of this face and get consecutive
-
-    # set preVert
-    # set prevface
-    # set vert
+        # cmds.createNode('transform', n='loc')
+        # cmds.parent(sph[0], 'loc')
