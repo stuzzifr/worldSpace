@@ -8,7 +8,7 @@ import pdb
 db = pdb.set_trace
 
 
-def reorder(array, ind):
+def reorderFaces(array, ind):
 
     ind = array.index(ind)
 
@@ -16,6 +16,20 @@ def reorder(array, ind):
     sortArray += array[0:ind]
 
     return sortArray[1:]
+
+def reorderVertices(array, ind):
+
+    array.reverse()
+
+    ind = array.index(ind)
+
+    print array, ind
+    sortArray = array[ind:]
+    sortArray += array[0:ind]
+
+    return sortArray
+
+
 
 class Point(object):
 
@@ -28,6 +42,8 @@ class Point(object):
 
         self._edgesAround = MIntArray()
         self._facesAround = MIntArray()
+        self._captial = -1
+        self._config = -1
 
     @property
     def fn(self):
@@ -105,31 +121,164 @@ class Point(object):
 
         return capital
 
+    @property
+    def config(self):
+        return self._config
 
-    def getLeftFace(self, preFace):
+    @config.setter
+    def config(self, value):
+        self._config = value
+
+    def getCommute(self, face):
+        # 2 common points but is not the anchor
+
+        for i in face.facesAround:
+
+            face = Face(i)
+            if not self.index in face.vtx and face.nature == 'tri':
+                face.isYang = True
+
+            if self.index in face.vtx and face.nature == 'tri':
+                face.isYang = False
+
+            return face
+
+
+    def getNextFace(self, mesh):
+
+        # need to get the left index
+
+        array = dict()
+
+        lastFace = mesh.preFace
+        faces = reorderFaces(self.facesAround, lastFace)
+
+        i = 0
+        while i < len(faces):
+
+            face = Face(faces[i])
+            # print '{} _ {}'.format(face.index, face.nature)
+
+            if face.nature == 'quad':
+
+                vtx = reorderVertices(face.vtx, self.index)
+                poses = MPointArray()
+
+                for v in vtx:
+                    point = Point(v)
+                    poses.append(point.pos)
+
+                array.setdefault(faces[i], poses)
+
+
+            if face.nature == 'tri':
+
+                preFace = Face(lastFace)
+
+                # preFaceSet = set(preFace.vtx)
+                # thisFaceSet = set(face.vtx)
+
+                # diff = thisFaceSet.difference(preFaceSet)
+
+                poses = MPointArray()
+
+                # -- ying and yang, share 2 common points but not the anchor
+                # if len(diff) == 1 and not list(diff)[0] == self.index:
+
+
+                faceYang = self.getCommute(face)
+
+                vtxYing = reorderVertices(face.vtx, self.index)
+                db()
+                vtxYang = reorderVertices(faceYang.vtx, vtxYing[1])
+                print 'aaaaa'
+
+                vtx = vtxYing[0:2]
+                vtx += vtxYang[1:3]
+
+                for v in vtx:
+                    point = Point(v)
+                    poses.append(point.pos)
+
+                if faceYang.isYang:
+                    lastFace = faces[i]
+                    array.setdefault(face.index, poses)
+
+                if not faceYang.isYang:
+                    lastFace = faces[i+1]
+                    i+=2
+                    array.setdefault(face.index, poses)
+
+                    continue
+
+
+
+                # # -- ying and ying
+                # if len(diff) == 1 and self.index in :
+                #     print 'iNT IT '
+                #     faceYang = Face(faces[i]+1)
+
+                #     vtxYing = reorderVertices(face.vtx, self.index)
+                #     vtxYang = reorderVertices(faceYang.vtx, vtxYing[1])
+
+                #     vtx = vtxYing[0:2]
+                #     vtx += vtxYang[1:3]
+
+                #     for v in vtx:
+                #         point = Point(v)
+                #         poses.append(point.pos)
+
+                #     lastFace = faces[i]
+                #     array.setdefault(faces[i], poses)
+                #     i+= 2
+
+                #     continue
+
+            i+=1
+
+        return array
+
+
+
+    def getLeftFace(self, mesh):
         """ Description
         preface as int()
         """
 
-        faces = reorder(self.facesAround, preFace)
-
+        faces = reorderFaces(self.facesAround, mesh.preFace)
         lastFace = Face(faces[-1])
+        outFace = -1
+
 
         if lastFace.nature == 'quad' and self.capital == 8:
-            print 'first'
-            return faces[-1]
+            self.config = 'first'
+            outFace = faces[-1]
 
         elif lastFace.nature == 'quad' and self.capital == 7:
-            print 'second'
-            return faces[-1]
+            self.config = 'second'
+            outFace = faces[-1]
 
         elif lastFace.nature == 'tri' and self.capital == 7:
-            print 'third'
-            return faces[-1]
+            self.config = 'third'
+
+            if mesh.turkish == 'third':
+                outFace = faces[-2]
+            else:
+                outFace = faces[-1]
 
         elif lastFace.nature == 'tri' and self.capital == 8:
-            print 'fourth'
-            return faces[-2]
+            self.config = 'fourth'
+            other = Face(faces[-2])
+
+            if other.nature == 'tri':
+                outFace = faces[-3]
+
+            if other.nature == 'quad':
+                outFace = faces[-2]
+
+        elif lastFace.nature == 'tri' and self.capital == 6:
+            outFace = faces[-1]
+            self.config = 'fifth'
 
         else:
             raise Exception('''cannot find this scenario
@@ -137,7 +286,7 @@ class Point(object):
                 nature: %s
                 capital: %s''' % (self.index, lastFace.nature, self.capital))
 
-
+        return outFace
 
 
 
@@ -244,6 +393,14 @@ class Face(object):
         self._index = index
 
     @property
+    def isYang(self):
+        return self._isYang
+
+    @isYang.setter
+    def isYang(self, value):
+        self._isYang = value
+
+    @property
     def vtx(self):
 
         around = MIntArray()
@@ -259,6 +416,12 @@ class Face(object):
 
         return [around[i] for i in range(around.length())]
 
+    @property
+    def facesAround(self):
+        around = MIntArray()
+        self.fn.getConnectedFaces(around)
+
+        return [around[i] for i in range(around.length())]
 
     def setTo(self, num):
 
@@ -268,42 +431,12 @@ class Face(object):
         self.fn.setIndex(num, prev)
         self.index = num
 
-    def corner(self):
-
-        index = self.vtx.index(self.anchor)
-        p1, p2, p3 = self.vtx[index-1: index+1]
-
-        P1 = Point(p1)
-        P2 = Point(p2)
-        P3 = Point(p3)
-
-        biggestAngle(P2.pos, P1.pos, P3.pos)
 
     def getLeftVtx(self, anchor):
         # -- vertice of the left, poly creation is anti CW
 
-        sortedVtx = reorder(self.vtx, anchor)
+        sortedVtx = reorderFaces(self.vtx, anchor)
         return sortedVtx[-1]
-
-
-    def getTurkish(self):
-
-        facesAround = MIntArray()
-        self.fn.getConnectedFaces(facesAround)
-
-        for f in xrange(facesAround):
-            face = Face(f)
-
-            if face.
-
-            aroundSet = set(facesAround)
-            currentSet = set(self.vtx)
-
-            res = aroundSet.difference(currentSet)
-
-            if res == 1:
-                return f
-
 
 
 class Mesh(object):
@@ -315,6 +448,7 @@ class Mesh(object):
 
         self._preVert = -1
         self._preFace = -1
+        self._turkish = -1
         self._way = 0
 
         if not self.iterG.count() == 2:
@@ -391,6 +525,14 @@ class Mesh(object):
     def preFace(self, value):
         self._preFace = value
 
+    @property
+    def turkish(self):
+        return self._turkish
+
+    @turkish.setter
+    def turkish(self, value):
+        self._turkish = value
+
 
 class Rerout(object):
 
@@ -398,32 +540,67 @@ class Rerout(object):
 
         self.mesh = Mesh()
         self.mesh.way = 1  # -- need to determine the direction
-        self.mesh.preFace = 44  # -- need to determine which face
+        self.mesh.preFace = 22  # -- need to determine which face
 
-        self.analyse()
+        # self.analyse()
+        self.analyse2()
 
-    def analyse(self):
+    def analyse2(self):
 
         vert = self.mesh.startVert
         poses = MPointArray()
 
+        toto = vert.getNextFace(self.mesh)
 
-        # need to add turkish face when capital 7
-        for i in range(6):  # -- search distance
 
-            leftFace = vert.getLeftFace(self.mesh.preFace)
+        mainGrp = cmds.createNode('transform', n='polys')
+        for key, item in toto.items():
+            grp = cmds.createNode('transform', n='poly_%d' % key)
 
-            f = Face(leftFace)
-            leftVtx = f.getLeftVtx(vert.index)
+            for i in xrange(item.length()):
 
-            outString = 'v.{} -- leftFace:{}, -- leftVtx:{}\n'
-            print outString.format(vert.index,
-                                   leftFace,
-                                   leftVtx,
-                                   )
+                sph = cmds.sphere(n="face_%d_" % key,
+                                  r=0.01,
+                                  p=[item[i].x, item[i].y, item[i].z])
 
-            self.mesh.preFace = leftFace
-            vert = Point(leftVtx)
+                cmds.parent(sph[0], grp)
+            cmds.parent(grp, mainGrp)
 
-        # cmds.createNode('transform', n='loc')
-        # cmds.parent(sph[0], 'loc')
+        cmds.select(mainGrp, add=False)
+
+
+    # def analyse(self):
+
+    #     vert = self.mesh.startVert
+    #     poses = MPointArray()
+
+    #     for i in range(4):  # -- search distance
+
+    #         leftFace = vert.getLeftFace(self.mesh)
+
+    #         f = Face(leftFace)
+    #         leftVtx = f.getLeftVtx(vert.index)
+
+    #         self.mesh.turkish = vert.capital
+
+    #         outString = 'v.{} -- leftFace:{}, -- leftVtx:{}\t -- cap:{} -- config:{}'
+    #         print outString.format(vert.index,
+    #                                leftFace,
+    #                                leftVtx,
+    #                                vert.capital,
+    #                                vert.config
+    #                                )
+
+    #         self.mesh.preFace = leftFace
+    #         vert = Point(leftVtx)
+    #         poses.append(MPoint(vert.pos.x, vert.pos.y, vert.pos.z))
+
+
+
+
+    #     cmds.createNode('transform', n='loc')
+    #     for i in xrange(poses.length()):
+    #         sph = cmds.sphere(p=(poses[i].x, poses[i].y, poses[i].z), n='sphe%d' % i, r=.02)
+    #         cmds.parent(sph[0], 'loc')
+
+    #     cmds.select('loc')
