@@ -17,18 +17,18 @@ def reorderFaces(array, ind):
 
     return sortArray[1:]
 
+
 def reorderVertices(array, ind):
 
+    print 'reorder {} {}'.format(array, ind)
     array.reverse()
-
     ind = array.index(ind)
 
-    print array, ind
     sortArray = array[ind:]
     sortArray += array[0:ind]
 
+    print 'finally ', sortArray
     return sortArray
-
 
 
 class Point(object):
@@ -42,6 +42,7 @@ class Point(object):
 
         self._edgesAround = MIntArray()
         self._facesAround = MIntArray()
+        self._faceOrder = list()
         self._captial = -1
         self._config = -1
 
@@ -79,6 +80,14 @@ class Point(object):
         self.fn.numConnectedEdges(num)
 
         return num
+
+    @property
+    def facesOrder(self):
+        return self._faceOrder
+
+    @facesOrder.setter
+    def facesOrder(self, value):
+        self._faceOrder = value
 
     def setTo(self, num):
 
@@ -129,116 +138,118 @@ class Point(object):
     def config(self, value):
         self._config = value
 
-    def getCommute(self, face):
-        # 2 common points but is not the anchor
+    def share1Vtx(self, face1, face2):
 
-        for i in face.facesAround:
+        var1 = face1.vtx
+        var1.remove(self.index)
 
-            face = Face(i)
-            if not self.index in face.vtx and face.nature == 'tri':
-                face.isYang = True
+        set1 = set(var1)
+        set2 = set(face2.vtx)
 
-            if self.index in face.vtx and face.nature == 'tri':
-                face.isYang = False
+        result = set1.intersection(set2)
 
-            return face
+        if len(result):
+            return True
 
+        if not len(result):
+            return False
+
+    def sameFace(self, face1, face2):
+
+        if face1.index == face2.index:
+            print '{} Same as Face {}?'.format(face1.index, face2.index)
+            return True
+
+        return False
+
+    def getYang(self, face, preFace):
+
+        print 'getyangm ', self.facesOrder
+        for i in self.facesOrder:
+
+            arrFace = Face(i)
+
+            # -- YANG got 1 vert shared with preface (anchor doesnt count)
+            if arrFace.nature == 'tri' and self.share1Vtx(preFace, arrFace):
+                arrFace.isYang = True
+                print '{} is yang of {}'.format(arrFace.index, face.index)
+                return arrFace
+
+            # -- if thisIndex is equal to nextFace.index
+            if arrFace.nature == 'tri' and self.sameFace(arrFace, Face(i)):
+                arrFace.isYang = False
+                print '{} is next to {}'.format(arrFace.index, face.index)
+                return arrFace
+
+            print 'no YANG FOUND!!!'
 
     def getNextFace(self, mesh):
 
-        # need to get the left index
-
-        array = dict()
-
-        lastFace = mesh.preFace
-        faces = reorderFaces(self.facesAround, lastFace)
-
+        self.facesOrder = reorderFaces(self.facesAround, mesh.preFace)
+        print 'facesOrder ', self.facesOrder
+        poses = list()
+        indices = list()
         i = 0
-        while i < len(faces):
 
-            face = Face(faces[i])
-            # print '{} _ {}'.format(face.index, face.nature)
+        while i < len(self.facesOrder):
+
+            print '\ntesting face:', self.facesOrder[i]
+            face = Face(self.facesOrder[i])
 
             if face.nature == 'quad':
 
                 vtx = reorderVertices(face.vtx, self.index)
-                poses = MPointArray()
+                pos = MPointArray()
 
                 for v in vtx:
                     point = Point(v)
-                    poses.append(point.pos)
+                    pos.append(point.pos)
 
-                array.setdefault(faces[i], poses)
-
+                mesh.preFace = self.facesOrder[i]
+                indices.append(self.facesOrder[i])
+                self.facesOrder.remove(self.facesOrder[i])
+                poses.append(poses)
 
             if face.nature == 'tri':
 
-                preFace = Face(lastFace)
+                preFace = Face(mesh.preFace)
 
-                # preFaceSet = set(preFace.vtx)
-                # thisFaceSet = set(face.vtx)
+                pos = MPointArray()
 
-                # diff = thisFaceSet.difference(preFaceSet)
-
-                poses = MPointArray()
-
-                # -- ying and yang, share 2 common points but not the anchor
-                # if len(diff) == 1 and not list(diff)[0] == self.index:
-
-
-                faceYang = self.getCommute(face)
-
+                faceYang = self.getYang(face, preFace)
                 vtxYing = reorderVertices(face.vtx, self.index)
-                db()
-                vtxYang = reorderVertices(faceYang.vtx, vtxYing[1])
-                print 'aaaaa'
-
-                vtx = vtxYing[0:2]
-                vtx += vtxYang[1:3]
-
-                for v in vtx:
-                    point = Point(v)
-                    poses.append(point.pos)
-
-                if faceYang.isYang:
-                    lastFace = faces[i]
-                    array.setdefault(face.index, poses)
+                vtxYang = reorderVertices(faceYang.vtx, vtxYing[-1])
 
                 if not faceYang.isYang:
-                    lastFace = faces[i+1]
-                    i+=2
-                    array.setdefault(face.index, poses)
+                    mesh.preFace = self.facesOrder[i + 1]
+                    print 'removing', faceYang.index
+                    self.facesOrder.remove(faceYang.index)
+                    vtx = vtxYing + vtxYang[1:2]
 
+                    for v in vtx:
+                        point = Point(v)
+                        pos.append(point.pos)
+
+                    i += 2
                     continue
 
+                if faceYang.isYang:
+                    print 'faceYang', faceYang.index
+                    mesh.preFace = faceYang.index
+                    self.facesOrder.remove(faceYang.index)
+                    # self.facesOrder.remove(faceYang.index)
+
+                    # indices.append(self.facesOrder[i])
 
 
-                # # -- ying and ying
-                # if len(diff) == 1 and self.index in :
-                #     print 'iNT IT '
-                #     faceYang = Face(faces[i]+1)
+                #     indices.append(self.facesOrder[i])
+                #     indices.append(self.facesOrder[i + 1])
+                #     poses.append(pos)
 
-                #     vtxYing = reorderVertices(face.vtx, self.index)
-                #     vtxYang = reorderVertices(faceYang.vtx, vtxYing[1])
+            i += 1
 
-                #     vtx = vtxYing[0:2]
-                #     vtx += vtxYang[1:3]
-
-                #     for v in vtx:
-                #         point = Point(v)
-                #         poses.append(point.pos)
-
-                #     lastFace = faces[i]
-                #     array.setdefault(faces[i], poses)
-                #     i+= 2
-
-                #     continue
-
-            i+=1
-
-        return array
-
-
+        print 'poses done'
+        return (indices, poses)
 
     def getLeftFace(self, mesh):
         """ Description
@@ -248,7 +259,6 @@ class Point(object):
         faces = reorderFaces(self.facesAround, mesh.preFace)
         lastFace = Face(faces[-1])
         outFace = -1
-
 
         if lastFace.nature == 'quad' and self.capital == 8:
             self.config = 'first'
@@ -287,7 +297,6 @@ class Point(object):
                 capital: %s''' % (self.index, lastFace.nature, self.capital))
 
         return outFace
-
 
 
 class Edge(object):
@@ -431,7 +440,6 @@ class Face(object):
         self.fn.setIndex(num, prev)
         self.index = num
 
-
     def getLeftVtx(self, anchor):
         # -- vertice of the left, poly creation is anti CW
 
@@ -540,9 +548,8 @@ class Rerout(object):
 
         self.mesh = Mesh()
         self.mesh.way = 1  # -- need to determine the direction
-        self.mesh.preFace = 22  # -- need to determine which face
+        self.mesh.preFace = 13  # -- need to determine which face
 
-        # self.analyse()
         self.analyse2()
 
     def analyse2(self):
@@ -550,24 +557,21 @@ class Rerout(object):
         vert = self.mesh.startVert
         poses = MPointArray()
 
-        toto = vert.getNextFace(self.mesh)
+        indices, poses = vert.getNextFace(self.mesh)
 
+        print 'poses\n', poses
+        # mainGrp = cmds.createNode('transform', n='polys')
 
-        mainGrp = cmds.createNode('transform', n='polys')
-        for key, item in toto.items():
-            grp = cmds.createNode('transform', n='poly_%d' % key)
+        # for i, pos in enumerate(poses):
+        #     # grp = cmds.createNode('transform', n='poly_%d' % i)
+        #     sph = cmds.sphere(n="face_%d_" % i,
+        #                       r=0.01,
+        #                       p=[pos[i].x, pos[i].y, pos[i].z])
 
-            for i in xrange(item.length()):
+        #     cmds.parent(sph[0], grp)
+        # cmds.parent(grp, mainGrp)
 
-                sph = cmds.sphere(n="face_%d_" % key,
-                                  r=0.01,
-                                  p=[item[i].x, item[i].y, item[i].z])
-
-                cmds.parent(sph[0], grp)
-            cmds.parent(grp, mainGrp)
-
-        cmds.select(mainGrp, add=False)
-
+        # cmds.select(mainGrp, add=False)
 
     # def analyse(self):
 
@@ -594,13 +598,3 @@ class Rerout(object):
     #         self.mesh.preFace = leftFace
     #         vert = Point(leftVtx)
     #         poses.append(MPoint(vert.pos.x, vert.pos.y, vert.pos.z))
-
-
-
-
-    #     cmds.createNode('transform', n='loc')
-    #     for i in xrange(poses.length()):
-    #         sph = cmds.sphere(p=(poses[i].x, poses[i].y, poses[i].z), n='sphe%d' % i, r=.02)
-    #         cmds.parent(sph[0], 'loc')
-
-    #     cmds.select('loc')
